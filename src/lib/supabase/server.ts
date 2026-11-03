@@ -1,10 +1,33 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+function isValidHttpUrl(stringUrl: string): boolean {
+  try {
+    const url = new URL(stringUrl);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export function createClient() {
   const cookieStore = cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+  if (
+    !isValidHttpUrl(supabaseUrl) ||
+    supabaseUrl.includes('your_supabase_url_here')
+  ) {
+    supabaseUrl = 'https://placeholder.supabase.co';
+  }
+
+  if (
+    !supabaseAnonKey ||
+    supabaseAnonKey.includes('your_supabase_anon_key_here')
+  ) {
+    supabaseAnonKey = 'placeholder-anon-key';
+  }
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -16,7 +39,6 @@ export function createClient() {
           cookieStore.set({ name, value, ...options });
         } catch {
           // The `set` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing user sessions.
         }
       },
       remove(name: string, options: CookieOptions) {
@@ -24,10 +46,8 @@ export function createClient() {
           cookieStore.set({ name, value: '', ...options });
         } catch {
           // The `delete` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing user sessions.
         }
       },
     },
   });
 }
-

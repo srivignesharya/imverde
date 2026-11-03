@@ -1,6 +1,15 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+function isValidHttpUrl(stringUrl: string): boolean {
+  try {
+    const url = new URL(stringUrl);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -9,8 +18,13 @@ export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-  // If env vars are not set during initial development, allow request to pass through
-  if (!supabaseUrl || !supabaseAnonKey) {
+  // If env vars are placeholder strings or not valid URLs, bypass auth session check during development
+  if (
+    !isValidHttpUrl(supabaseUrl) ||
+    supabaseUrl.includes('your_supabase_url_here') ||
+    !supabaseAnonKey ||
+    supabaseAnonKey.includes('your_supabase_anon_key_here')
+  ) {
     return supabaseResponse;
   }
 
@@ -56,9 +70,6 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // IMPORTANT: Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -87,4 +98,3 @@ export async function updateSession(request: NextRequest) {
 
   return supabaseResponse;
 }
-
