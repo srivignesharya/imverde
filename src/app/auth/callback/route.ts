@@ -2,6 +2,15 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
 
+function isValidHttpUrl(stringUrl: string): boolean {
+  try {
+    const url = new URL(stringUrl);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
@@ -9,8 +18,15 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const cookieStore = cookies();
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+    if (!isValidHttpUrl(supabaseUrl) || supabaseUrl.includes('your_supabase_url_here')) {
+      supabaseUrl = 'https://placeholder.supabase.co';
+    }
+    if (!supabaseAnonKey || supabaseAnonKey.includes('your_supabase_anon_key_here')) {
+      supabaseAnonKey = 'placeholder-anon-key';
+    }
 
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
@@ -32,7 +48,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Return user to an error page or auth page with an error parameter
+  // Return user to auth page with an error parameter
   return NextResponse.redirect(`${origin}/auth?error=auth_callback_failed`);
 }
-
